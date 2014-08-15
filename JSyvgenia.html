@@ -1,0 +1,3751 @@
+
+<!DOCTYPE html>
+<html><head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta name="description" content="Online sudoku game" />
+		<title>Sudoku game</title>
+		<script type="text/javascript">
+			var holes = 0;
+			var all_combinations = [];
+			var one_combination;
+			function checkwidth(){
+				var body = document.getElementById('body');
+				var window_width = body.offsetWidth;
+				var right_offset = ( window_width - 540 ) / 2;
+				var table = document.getElementById('maintable');
+				table.style.marginRight = right_offset + 'px';
+			}
+			/*
+				When the mouse is over the cell this function highlights the row, column and a square of the cell.
+				Receives row, col, number of a table.
+			*/
+			function highlight(row, col, table){
+				var i, j;
+				var element;
+				element=document.getElementById('t'+table);
+				element.bgColor = '#FFFF87';
+				for(i=1; i<=9; i++)
+				{
+					element=document.getElementById('c'+row+i);
+					element.bgColor = '#91FFC6';
+				}
+				for(i=1; i<=9; i++)
+				{
+					element=document.getElementById('c'+i+col);
+					element.bgColor = '#91FFC6';
+				}
+				element=document.getElementById('c'+row+col);
+				element.bgColor = '#FFFFFF';
+			}
+			/*
+				When the mouse leaves cell unhighlights the row, column and a square of the cell.
+				Receives row, col, number of a table.
+			*/
+			function unhighlight(row, col, table){
+				var i, j;
+				var element;
+				element=document.getElementById('t'+table);
+				element.bgColor = '';
+				for(i=1; i<=9; i++)
+				{
+					element=document.getElementById('c'+row+i);
+					element.bgColor = '';
+				}
+				for(i=1; i<=9; i++)
+				{
+					element=document.getElementById('c'+i+col);
+					element.bgColor = '';
+				}
+				element=document.getElementById('c'+row+col);
+				element.bgColor = '';
+			}
+			/*
+				Fills field from db
+				Receives void
+			*/
+			function fillDB(){
+				for(var row=0; row<9; row++)
+				{
+					for(var col=0; col<9; col++)
+					{
+						var x=row+1;
+						var y=col+1;
+						var cell = document.getElementById('inval' + x + y);
+						if(db[row * 9 + col])
+						{
+							cell.innerHTML = db[row * 9 + col];
+						}
+						else
+						{
+							cell.innerHTML = '&nbsp;';
+						}
+					}
+				}
+			}
+			/*
+				On double click on cell shows numbers to choose to insert in the cell.
+			*/
+			function insertnum(row, col){
+				var div=document.getElementById('inval'+row+col);
+				div.style.display='none';
+				var posible = document.getElementById('pos'+row+col);
+				if(posible)
+				{
+					posible.style.display = 'none';
+				}
+				var table=document.getElementById('intab'+row+col);
+				table.style.display='';
+			}
+			/*
+				Inserts the number into the cell in array and in page.
+				Receives row, col, num
+			*/
+			function acceptnum(row, col, num){
+				var div=document.getElementById('inval'+row+col);
+				div.style.display='';
+				div.innerHTML=num;
+				var table=document.getElementById('intab'+row+col);
+				table.style.display='none';
+				if(check(row, col, num)) // If the number is allowed to be putted in this cell it copyed to array.
+				{
+					arr[row][col]=num;
+					div.style.color='';
+				}
+				else // If number not allowed to be putted in this cell the color of text changed to red and number not copyed to array.
+				{
+					div.style.color='#FF0000';
+				}
+			}
+			/*
+				Checks is number allowed to be putted in cell
+				Receives row, col, num
+				Returns boolean
+			*/
+			function check(row, col, num){
+				var range1 = new range(row, col);
+				for(var i=1; i<10; i++)
+					for(var j=1; j<10; j++)
+					{
+						if((i == row || j == col) && !(i == row && j == col) && arr[i][j] == num)
+							return false; // If in this row or column this number already exists returns false.
+					}
+				for(var i=range1.minrow; i<=range1.maxrow; i++)
+					for(var j=range1.mincol; j<=range1.maxcol; j++)
+					{
+						if(!(i == row && j == col) && arr[i][j] == num)
+							return false; // If in this square this number already exists returns false.
+					}
+				return true; // If non of the above was returned returns true.
+			}
+			/*
+				Cleans the cell in array and in page
+				Receives row, col
+			*/
+			function clean(row, col){
+				var div=document.getElementById('inval'+row+col);
+				div.innerHTML='&nbsp;';
+				arr[row][col]=0;
+				div.style.color='';
+			}
+			function SumGrid(){
+				var ret_value = 0;
+				for(var i=0; i<9; i++)
+				{
+					for(var j=0; j<9; j++)
+					{
+						ret_value = ret_value + possibilities[i][j][0];
+					}
+				}
+				return ret_value;
+			}
+			function SumPosible(){
+				var ret_value = 0;
+				for(var i=0; i<9; i++)
+				{
+					for(var j=0; j<9; j++)
+					{
+						for(var k=1; k<10; k++)
+						{
+							ret_value = ret_value + possibilities[i][j][k];
+						}
+					}
+				}
+				return ret_value;
+			}
+			var hidden_solv=false;
+			function GridState(){
+				this.grid = SumGrid();
+				this.posible = SumPosible();
+			}
+			/*
+				Solves sudoku. Not done yet.
+			*/
+			function solve(){
+			//	alert('This will start solver');
+			//	alert('arr[3] = ' + arr[3]);
+				var i, j, k;
+				var chbox;
+				for(i=0, flag=0; flag==0;i++) // does all the principles of solving
+				{
+					var before = new GridState();
+					chbox = document.getElementById('cb1');
+					if(chbox.checked)
+					{
+						lonely();
+					}
+					chbox = document.getElementById('cb2');
+					if(chbox.checked)
+					{
+						hiddenLonly();
+					}
+					chbox = document.getElementById('cb3');
+					if(chbox.checked)
+					{
+						lockedCandidate();
+					}
+					chbox = document.getElementById('cb4');
+					if(chbox.checked)
+					{
+						OpenGroups();
+					}
+					var after = new GridState();
+					if(before.grid == after.grid && before.posible == after.posible)
+					{
+						flag = 1;
+					}
+				/*	else
+					{
+						alert('i = ' + i + '\nWas change\nbefore.grid = ' + before.grid + '\nafter.grid = ' + after.grid + '\n\nbefore.posible = ' + before.posible + '\nafter.posible = ' + after.posible);
+					}*/
+				}
+				//alert('i = ' + i + '\nChanges stopped\nbefore.grid = ' + before.grid + '\nafter.grid = ' + after.grid + '\n\nbefore.posible = ' + before.posible + '\nafter.posible = ' + after.posible);
+				if(after.posible)
+				{
+				//	alert('Sudoku is unsolvable');
+					return false;
+				}
+				else
+				{
+				//	alert('Sudoku is solvable');
+					return true;
+				}
+			/*
+				<input type="checkbox" id="cb1" value="Checkit"/> Use Lonely<br/>
+				<input type="checkbox" id="cb2" value="Checkit"/> Use Hidden lonely<br/>
+				<input type="checkbox" id="cb3" value="Checkit"/> Use Locked candidates<br/>
+				<input type="checkbox" id="cb4" value="Checkit"/> Use Open pairs<br/>
+				<input type="checkbox" id="cb5" value="Checkit"/> Use Hidden open pairs<br/>
+			*/	
+			//	alert('posibilities[8][8] = ' + possibilities[8][8]);
+			/*	alert('posibilities[0][7] = ' + possibilities[0][7]);
+				alert('posibilities[0][8] = ' + possibilities[0][8]);
+				alert('posibilities[1][6] = ' + possibilities[1][6]);
+				alert('posibilities[1][7] = ' + possibilities[1][7]);
+				alert('posibilities[1][8] = ' + possibilities[1][8]);
+				alert('posibilities[2][6] = ' + possibilities[2][6]);
+				alert('posibilities[2][7] = ' + possibilities[2][7]);
+				alert('posibilities[2][8] = ' + possibilities[2][8]);*/
+			//	for()
+			//	alert('Solver finished working');
+			}
+			/*
+				Finds lonely - cells that contain only one possible number to fit and places it there.
+			*/
+			function lonely(){
+		//	alert('Lonely started');
+				var sum_posibilityes;
+				for(var row=0; row<9; row++)
+				{
+					for(var col=0; col<9; col++)
+					{
+						sum_posibilityes = 0;
+						for(var i=1; i<10; i++)
+						{
+							sum_posibilityes+=possibilities[row][col][i];
+						}
+						if(sum_posibilityes==1)
+						{
+							for(var i=1; i<10; i++)
+							{
+								if(possibilities[row][col][i]==1)
+								{
+								//	alert('There is only 1 posibility for ' + row + ' row ' + col + ' col');
+									possibilities[row][col][0] = i;
+									var idrow = row+1, idcol = col+1;
+									if(hidden_solv)
+									{
+										var cell = document.getElementById('inval' + idrow + idcol);
+										cell.innerHTML = i;
+									}
+									fitposition(row, col, i);
+									i=10;
+								}
+							}
+						}
+					}
+				}
+			}
+			/*
+				Finds hidden lonely - cells that contain posibility that fits only in this cell in row/column/square
+			*/
+			function hiddenLonly(){
+			// Hidden lonely in rows
+			//	alert('Hidden lonely for rows started');
+					var sum_posibilityes;
+				for(var row=0; row<9; row++)
+				{
+				//	alert('row=' + row);
+					for(var i=1; i<10; i++)
+					{
+				//		alert('i=' + i);
+						sum_posibilityes = 0;
+						for(var col=0; col<9; col++)
+						{
+				//			alert('col=' + col);
+							sum_posibilityes+=possibilities[row][col][i];
+						}
+				//		alert('sum_posibilityes = ' + sum_posibilityes);
+						if(sum_posibilityes==1)
+						{
+							for(var col=0; col<9; col++)
+							{
+				//				alert('col=' + col);
+								if(possibilities[row][col][i]==1)
+								{
+				//					alert('true');
+									possibilities[row][col][0] = i;
+									var idrow = row+1, idcol = col+1;
+									if(hidden_solv)
+									{
+										var cell = document.getElementById('inval' + idrow + idcol);
+										cell.innerHTML = i;
+									}
+									fitposition(row, col, i);
+									col=10;
+								}
+				//				alert('falce');
+							}
+						}
+					}
+				}
+			// Hidden lonely in columns
+			//	alert('Hidden linely for columns started');
+				for(var col=0; col<9; col++)
+				{
+					for(var i=1; i<10; i++)
+					{
+						sum_posibilityes = 0;
+						for(var row=0; row<9; row++)
+						{
+							sum_posibilityes+=possibilities[row][col][i];
+						}
+						if(sum_posibilityes==1)
+						{
+							for(var row=0; row<9; row++)
+							{
+								if(possibilities[row][col][i]==1)
+								{
+								//	alert('There is only 1 posibility for ' + row + ' row ' + col + ' col');
+									possibilities[row][col][0] = i;
+									var idrow = row+1, idcol = col+1;
+									var cell = document.getElementById('inval' + idrow + idcol);
+									cell.innerHTML = i;
+									fitposition(row, col, i);
+									row=10;
+								}
+							}
+						}
+					}
+				}
+			// Hidden lonely in squares
+			//	alert('Hidden linely for squares started');
+				var r = new range(1,1);
+				r.minrow--;
+				r.maxrow--;
+				r.mincol--;
+				r.maxcol--;
+				while(r.maxrow<9)
+				{
+					while(r.maxcol<9)
+					{
+					//	alert('r.mimrow = ' + r.minrow + ' r.maxrow = ' + r.maxrow + '\nr.mincol = ' + r.mincol + 'r.maxcol' + r.maxcol);
+						for(var i=1; i<=10; i++)
+						{
+							sum_posibilityes = 0;
+							for(var row=r.minrow; row<=r.maxrow; row++)
+							{
+								for(var col=r.mincol; col<=r.maxcol; col++)
+								{
+									sum_posibilityes+=possibilities[row][col][i];
+								}
+							}
+							if(sum_posibilityes==1)
+							{
+								for(var row=r.minrow; row<=r.maxrow; row++)
+								{
+									for(var col=r.mincol; col<=r.maxcol; col++)
+									{
+										if(possibilities[row][col][i]==1)
+										{
+											possibilities[row][col][0] = i;
+											var idrow = row+1, idcol = col+1;
+											var cell = document.getElementById('inval' + idrow + idcol);
+											cell.innerHTML = i;
+											fitposition(row, col, i);
+											row = 10;
+											col = 10;
+										}
+									}
+								}
+							}
+						}
+						r.mincol+=3;
+						r.maxcol+=3;
+					}
+					r.minrow+=3;
+					r.maxrow+=3;
+					r.mincol-=9;
+					r.maxcol-=9;
+				}
+			}
+			/*
+				Searches for one block in row/column/square that contains possible number that
+				not possible put in other block in row/column/square and eliminates this number
+				from posibilityes in other row/column/square that also contains this block.
+			*/
+			function lockedCandidate(){
+				var horizontal_blocks = [[[0],[0],[0]],
+										[[0],[0],[0]],
+										[[0],[0],[0]],
+										[[0],[0],[0]],
+										[[0],[0],[0]],
+										[[0],[0],[0]],
+										[[0],[0],[0]],
+										[[0],[0],[0]],
+										[[0],[0],[0]]];
+				var vertical_blocks = 	[[[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+										[[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+										[[0],[0],[0],[0],[0],[0],[0],[0],[0]]];
+				for(var i=0; i<3; i++)
+				{
+					for(var j=0; j<9; j++)
+					{
+						for(var k=0; k<10; k++)
+						{
+							vertical_blocks[i][j][k] = 0;
+						}
+					}
+				}
+			//	alert("The initiation of vertical_blocks was successfull.");
+				for(var i=0; i<9; i++)
+				{
+					for(var j=0; j<3; j++)
+					{
+						for(var k=0; k<10; k++)
+						{
+							horizontal_blocks[i][j][k] = 0;
+						}
+					}
+				}
+			//	alert("The initiation of horizontal_blocks was successfull.");
+				for(var row=0; row<9; row++)
+				{
+					for(var col=0; col<9; col++)
+					{
+						for(var i=1; i<10; i++)
+						{
+							if(possibilities[row][col][i])
+							{
+							//	alert('possibilities[' + row + '][' + col + '][' + i + '] = ' + possibilities[row][col][i] + '\nVertical blocks will be 1');
+								vertical_blocks[BlocksConvert(row)][col][i] = 1;
+								horizontal_blocks[row][BlocksConvert(col)][i] = 1;
+							}
+						}
+					}
+				}
+				var row_with_locked_candidat;
+				var column_with_locked_candidat;
+				// Horizontal blocks treatment. Start\\
+				var counter;
+				// Case of one block in row. Start\\
+				for(var row=0; row<9; row++)
+				{
+					for(var i=1; i<10; i++)
+					{
+						counter=0;
+						for(var col=0; col<3; col++)
+						{
+							if(horizontal_blocks[row][col][i]==1)
+							{
+								counter++;
+								column_with_locked_candidat = col;
+							}
+						}
+						if(counter==1)
+						{
+						//	alert('Found locked candidate in horizontal_blocks[' + row + '][' + column_with_locked_candidat + '] = ' + i);
+						//	var rang = new OneAxisRange(row);
+							switch(row)
+							{
+								case 0: case 3: case 6:
+								{
+									eliminatePosibleHorizontal(horizontal_blocks, row+1, column_with_locked_candidat, i);
+									eliminatePosibleHorizontal(horizontal_blocks, row+2, column_with_locked_candidat, i);
+									break;
+								}
+								case 1: case 4: case 7:
+								{
+									eliminatePosibleHorizontal(horizontal_blocks, row-1, column_with_locked_candidat, i);
+									eliminatePosibleHorizontal(horizontal_blocks, row+1, column_with_locked_candidat, i);
+									break;
+								}
+								case 2: case 5: case 8:
+								{
+									eliminatePosibleHorizontal(horizontal_blocks, row-2, column_with_locked_candidat, i);
+									eliminatePosibleHorizontal(horizontal_blocks, row-1, column_with_locked_candidat, i);
+									break;
+								}
+							}
+						}
+					}
+				}
+				/* \\ Case of one block in row. End //*/
+				// Case of one block in square with horizontal blocks. Start \\
+				for(var big_row=0; big_row<3; big_row++)
+				{
+					for(var col=0; col<3; col++)
+					{
+						var range_row = new OneAxisRangeConvertFromBlocks(big_row);
+						for(var i=1; i<10; i++)
+						{
+							counter = 0;
+							for(var row=range_row.minimum; row<=range_row.maximum; row++)
+							{
+								if(horizontal_blocks[row][col][i] == 1)
+								{
+									counter++;
+									row_with_locked_candidat = row;
+								}
+							}
+							if(counter==1)
+							{
+								switch(col)
+								{
+									case 0:
+									{
+										eliminatePosibleHorizontal(horizontal_blocks, row_with_locked_candidat, col+1, i);
+										eliminatePosibleHorizontal(horizontal_blocks, row_with_locked_candidat, col+2, i);
+										break;
+									}
+									case 1:
+									{
+										eliminatePosibleHorizontal(horizontal_blocks, row_with_locked_candidat, col-1, i);
+										eliminatePosibleHorizontal(horizontal_blocks, row_with_locked_candidat, col+1, i);
+										break;
+									}
+									case 2:
+									{
+										eliminatePosibleHorizontal(horizontal_blocks, row_with_locked_candidat, col-1, i);
+										eliminatePosibleHorizontal(horizontal_blocks, row_with_locked_candidat, col-2, i);
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+				/* \\ Case of one block in square with horizontal blocks. End //*/
+				/* \\ Horizontal blocks treatment. End //*/
+				
+				
+				// Vertical blocks treatment. Start \\
+				// Case of one block in column. Start \\
+				for(var col=0; col<9; col++)
+				{
+					for(var i=1; i<10; i++)
+					{
+						counter=0;
+						for(var row=0; row<3; row++)
+						{
+							if(vertical_blocks[row][col][i]==1)
+							{
+								counter++;
+								row_with_locked_candidat = row;
+							}
+						}
+						if(counter==1)
+						{
+						//	alert('Found locked candidate in vertical_blocks[' + row_with_locked_candidat + '][' + col + '] = ' + i);
+						//	var rang = new OneAxisRange(col);
+							switch(col)
+							{
+								case 0: case 3: case 6:
+								{
+									eliminatePosibleVertical(vertical_blocks, row_with_locked_candidat, col+1, i);
+									eliminatePosibleVertical(vertical_blocks, row_with_locked_candidat, col+2, i);
+									break;
+								}
+								case 1: case 4: case 7:
+								{
+									eliminatePosibleVertical(vertical_blocks, row_with_locked_candidat, col-1, i);
+									eliminatePosibleVertical(vertical_blocks, row_with_locked_candidat, col+1, i);
+									break;
+								}
+								case 2: case 5: case 8:
+								{
+									eliminatePosibleVertical(vertical_blocks, row_with_locked_candidat, col-2, i);
+									eliminatePosibleVertical(vertical_blocks, row_with_locked_candidat, col-1, i);
+									break;
+								}
+							}
+						}
+					}
+				}
+				/* \\ Case of one block in column. End //*/
+				// Case of one block in square with vertical blocks. Start \\
+				for(var big_col=0; big_col<3; big_col++)
+				{
+					for(var row=0; row<3; row++)
+					{
+						var range_col = new OneAxisRangeConvertFromBlocks(big_col);
+						for(var i=1; i<10; i++)
+						{
+							counter = 0;
+							for(var col=range_col.minimum; col<=range_col.maximum; col++)
+							{
+								if(vertical_blocks[row][col][i] == 1)
+								{
+									counter++;
+									column_with_locked_candidat = col;
+								}
+							}
+							if(counter==1)
+							{
+								switch(row)
+								{
+									case 0:
+									{
+										eliminatePosibleVertical(vertical_blocks, row+1, column_with_locked_candidat, i);
+										eliminatePosibleVertical(vertical_blocks, row+2, column_with_locked_candidat, i);
+										break;
+									}
+									case 1:
+									{
+										eliminatePosibleVertical(vertical_blocks, row+1, column_with_locked_candidat, i);
+										eliminatePosibleVertical(vertical_blocks, row-1, column_with_locked_candidat, i);
+										break;
+									}
+									case 2:
+									{
+										eliminatePosibleVertical(vertical_blocks, row-1, column_with_locked_candidat, i);
+										eliminatePosibleVertical(vertical_blocks, row-2, column_with_locked_candidat, i);
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+				/* \\ Case of one block in square. End //*/
+				/* \\ Vertical blocks treatment. End //*/
+			}
+			/*
+			*/
+			function OpenGroups(){
+				var count_of_possibilities_in_cells = [0,0,0,0,0,0,0,0,0];
+				var amount_of_cells_with_max_count_posibilityes = [0,0,0,0,0,0,0,0,0];
+				// START OF SEARCH IN ROWS \\
+				for(var row=0; row<9; row++)
+				{
+					var unsolved_cells = 0;
+					for(var col=0; col<9; col++)
+					{
+						if(!(possibilities[row][col][0]))
+						{
+							unsolved_cells++;
+						}
+						count_of_possibilities_in_cells[col] = 0;
+						for(var i=1; i<10; i++)
+						{
+							if(possibilities[row][col][i])
+							{
+								count_of_possibilities_in_cells[col]++;
+							}
+						}
+					}
+					for(var i=0; i<9; i++)
+					{
+						amount_of_cells_with_max_count_posibilityes[i]=0;
+					}
+					for(var i=0; i<9; i++)
+					{
+						if(count_of_possibilities_in_cells[i])
+						{
+							for(var j=count_of_possibilities_in_cells[i]; j<9; j++)
+							{
+								amount_of_cells_with_max_count_posibilityes[j]++;
+							}
+						}
+					}
+					for(var amount_of_numbers_in_open_group = 2; amount_of_numbers_in_open_group < 9; amount_of_numbers_in_open_group++)
+					{
+						if(amount_of_cells_with_max_count_posibilityes[amount_of_numbers_in_open_group] >= amount_of_numbers_in_open_group && amount_of_numbers_in_open_group != unsolved_cells)
+						{
+							var possible_cells_with_open_group = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1];
+							var index_for_possible_cells = 0;
+							for(var col=0; col<9; col++)
+							{
+								if(count_of_possibilities_in_cells[col] <= amount_of_numbers_in_open_group && count_of_possibilities_in_cells[col]!==0)
+								{
+									possible_cells_with_open_group[index_for_possible_cells] = col;
+									index_for_possible_cells++;
+								}
+							}
+							var possible_cells_with_open_group_length = 0;
+							while(possible_cells_with_open_group[possible_cells_with_open_group_length] != -1)
+							{
+								possible_cells_with_open_group_length++;
+							}
+							var cells_to_check_for_group = CellsToCheck(amount_of_numbers_in_open_group, possible_cells_with_open_group_length);
+							var next_group = 0;
+							while(cells_to_check_for_group[next_group][0]!=-1)
+							{
+								var open_group = [0,0];
+								for(var i=0; i<amount_of_numbers_in_open_group; i++)
+								{
+									open_group[i] = possible_cells_with_open_group[cells_to_check_for_group[next_group][i]];
+								}
+								var open_group_posibilityes = [0,0,0,0,0,0,0,0,0,0];
+								for(var i = 0; i<amount_of_numbers_in_open_group; i++)
+								{
+									for(var j = 1; j < 10; j++)
+									{
+										if(possibilities[row][open_group[i]][j])
+										{
+											open_group_posibilityes[j] = 1;
+										}
+									}
+								}
+								var open_group_posibilityes_count = 0;
+								for(var i = 0; i < 10; i++)
+								{
+									open_group_posibilityes_count = open_group_posibilityes_count + open_group_posibilityes[i];
+								}
+								if(open_group_posibilityes_count == amount_of_numbers_in_open_group)
+								{
+									for(var i=1; i<10; i++)
+									{
+										if(open_group_posibilityes[i])
+										{
+											var from_where_to_remove = [0,0,0,0,0,0,0,0,0];
+											for(var col=0; col<9; col++)
+											{
+												if(possibilities[row][col][i])
+												{
+													from_where_to_remove[col] = 1;
+												}
+											}
+											for(var j = 0; j < amount_of_numbers_in_open_group; j++)
+											{
+												from_where_to_remove[open_group[j]] = 0;
+											}
+											for(var col=0; col<9; col++)
+											{
+												if(from_where_to_remove[col])
+												{
+													possibilities[row][col][i] = 0;
+												}
+											}
+										}
+									}
+								}
+								next_group++;
+							}
+						}
+					}
+				}
+				// END OF SEARCH IN ROWS //
+				count_of_possibilities_in_cells = [0,0,0,0,0,0,0,0,0];
+				amount_of_cells_with_max_count_posibilityes = [0,0,0,0,0,0,0,0,0];
+				// START OF SEARCH IN COLUMNS \\
+				for(var col=0; col<9; col++)
+				{
+					var unsolved_cells = 0;
+					for(var row=0; row<9; row++)
+					{
+						if(!(possibilities[row][col][0]))
+						{
+							unsolved_cells++;
+						}
+						count_of_possibilities_in_cells[row] = 0;
+						for(var i=1; i<10; i++)
+						{
+							if(possibilities[row][col][i])
+							{
+								count_of_possibilities_in_cells[row]++;
+							}
+						}
+					}
+					for(var i=0; i<9; i++)
+					{
+						amount_of_cells_with_max_count_posibilityes[i]=0;
+					}
+					for(var i=0; i<9; i++)
+					{
+						if(count_of_possibilities_in_cells[i])
+						{
+							for(var j=count_of_possibilities_in_cells[i]; j<9; j++)
+							{
+								amount_of_cells_with_max_count_posibilityes[j]++;
+							}
+						}
+					}
+					for(var amount_of_numbers_in_open_group = 2; amount_of_numbers_in_open_group < 9; amount_of_numbers_in_open_group++)
+					{
+						if(amount_of_cells_with_max_count_posibilityes[amount_of_numbers_in_open_group] >= amount_of_numbers_in_open_group && amount_of_numbers_in_open_group != unsolved_cells)
+						{
+							var possible_cells_with_open_group = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1];
+							var index_for_possible_cells = 0;
+							for(var row=0; row<9; row++)
+							{
+								if(count_of_possibilities_in_cells[row] <= amount_of_numbers_in_open_group && count_of_possibilities_in_cells[row]!==0)
+								{
+									possible_cells_with_open_group[index_for_possible_cells] = row;
+									index_for_possible_cells++;
+								}
+							}
+							var possible_cells_with_open_group_length = 0;
+							while(possible_cells_with_open_group[possible_cells_with_open_group_length] != -1)
+							{
+								possible_cells_with_open_group_length++;
+							}
+							var cells_to_check_for_group = CellsToCheck(amount_of_numbers_in_open_group, possible_cells_with_open_group_length);
+							var next_group = 0;
+							while(cells_to_check_for_group[next_group][0]!=-1)
+							{
+								var open_group = [0,0];
+								for(var i=0; i<amount_of_numbers_in_open_group; i++)
+								{
+									open_group[i] = possible_cells_with_open_group[cells_to_check_for_group[next_group][i]];
+								}
+								var open_group_posibilityes = [0,0,0,0,0,0,0,0,0,0];
+								for(var i = 0; i<amount_of_numbers_in_open_group; i++)
+								{
+									for(var j = 1; j < 10; j++)
+									{
+										if(possibilities[open_group[i]][col][j])
+										{
+											open_group_posibilityes[j] = 1;
+										}
+									}
+								}
+								var open_group_posibilityes_count = 0;
+								for(var i = 0; i < 10; i++)
+								{
+									open_group_posibilityes_count = open_group_posibilityes_count + open_group_posibilityes[i];
+								}
+								if(open_group_posibilityes_count == amount_of_numbers_in_open_group)
+								{
+									for(var i=1; i<10; i++)
+									{
+										if(open_group_posibilityes[i])
+										{
+											var from_where_to_remove = [0,0,0,0,0,0,0,0,0];
+											for(var row=0; row<9; row++)
+											{
+												if(possibilities[row][col][i])
+												{
+													from_where_to_remove[row] = 1;
+												}
+											}
+											for(var j = 0; j < amount_of_numbers_in_open_group; j++)
+											{
+												from_where_to_remove[open_group[j]] = 0;
+											}
+											for(var row=0; row<9; row++)
+											{
+												if(from_where_to_remove[row])
+												{
+													possibilities[row][col][i] = 0;
+												}
+											}
+										}
+									}
+								}
+								next_group++;
+							}
+						}
+					}
+				}
+			}
+			/*
+				Returns array with all combinations how_many length of 0-of_how_many digits.
+			*/
+			function CellsToCheck(how_many, of_how_many){
+				all_combinations = [];
+				GetCombinations(how_many, of_how_many);
+				one_combination[0] = -1;
+				all_combinations[all_combinations.length]=one_combination.slice(0);
+			//	alert('how_many = ' + how_many + '\nof_how_many = ' + of_how_many + '\n' + all_combinations);
+				return all_combinations;
+			}
+			/*
+				Fills all_combinations array with all combinations a length of 0-b digits
+			*/
+			function GetCombinations(a,b){
+				var level, i;
+				
+				if (arguments[2])
+				{
+					level=arguments[2];
+					start=one_combination[level-1]+1;
+				}
+				else 
+				{
+					level=0;
+					start=0;
+					one_combination=new Array(a-1);  
+				}
+				
+				for (i=start;i<=b-a+level;i++)
+				{
+					one_combination[level]=i;
+					if (level<a-1)
+					{
+						GetCombinations(a,b,level+1)
+					}
+					else 
+					{
+						all_combinations[all_combinations.length]=one_combination.slice(0);
+					}
+				}
+				return
+			}
+			/*
+				Converts row or col to block. For inner use of lockedCandidate.
+				Receives row/col
+				Returns 0-2 value.
+			*/
+			function BlocksConvert(i){
+				var return_value = (i<3)?(0):((i<6)?(1):(2));
+				return return_value;
+			}
+			/*
+				Eliminates number from posibilityes in horizontal blocks
+				Received values:
+				* localarr - array with horizontal blocks to remove from it possible values
+				* row - row of cell from it should be removed value
+				* col - col of cell from it should be removed value
+				* num - the value that should be removed
+			*/
+			function eliminatePosibleHorizontal(localarr, row, col, num){
+				localarr[row][col][num] = 0;
+				var r = new OneAxisRangeConvertFromBlocks(col);
+				for(var i = r.minimum; i<=r.maximum; i++)
+				{
+				//	if(i==8)
+					//	alert('Eliminating from horizontal_blocks[' + row + '][' + col + '][' + num + ']\r.minimum = ' + r.minimum + '\nr.maximum = ' + r.maximum);
+					possibilities[row][i][num] = 0;
+				}
+			}
+			/*
+				Eliminates number from posibilityes in vertical blocks
+				Received values:
+				* localarr - array with vertical blocks to remove from it possible values
+				* row - row of cell from it should be removed value
+				* col - col of cell from it should be removed value
+				* num - the value that should be removed
+			*/
+			function eliminatePosibleVertical(localarr, row, col, num){
+				localarr[row][col][num] = 0;
+				var r = new OneAxisRangeConvertFromBlocks(row);
+				for(var i = r.minimum; i<=r.maximum; i++)
+				{
+				//	if(i==8)
+					//	alert('Eliminating from horizontal_blocks[' + row + '][' + col + '][' + num + ']\r.minimum = ' + r.minimum + '\nr.maximum = ' + r.maximum);
+					possibilities[i][col][num] = 0;
+				}
+			}
+			/*
+				Removes num from possibilityes where after inserting num it is not possible any more to insert this number.
+				Receives row, col, num.
+			*/
+			function fitposition(row, col, num){
+			//	alert('In ' + row + ' row and ' + col + ' col was inserted number ' + num);
+				var k, l;
+				for(k=1; k<10; k++) // Deletes all possibilityes from the cell[row][col]
+					possibilities[row][col][k] = 0;
+			//	alert('possibilities[' + row + '][' + col + '] =\n' + possibilities[row][col]);
+				for(k=0; k<9; k++) // Deletes num from the possibilityes in the row
+					possibilities[row][k][num] = 0;
+				for(k=0; k<9; k++) // Deletes num from the possibilityes in the col
+					possibilities[k][col][num] = 0;
+				var r1 = new range(row+1, col+1);
+				for(k=(r1.minrow)-1; k<r1.maxrow; k++) // Deletes num from the possibilityes in the square
+					for(l=(r1.mincol)-1; l<r1.maxcol; l++)
+					{
+						possibilities[k][l][num] = 0;
+				//		alert('possibilities[' + k + '][' + l + '] = ' + possibilities[k][l]);
+					}
+			}
+			/*
+				Cleans all cells
+			*/
+			function cleanall(){
+				for(var i=1; i<10; i++)
+				{
+					if(i<5)
+					{
+						var box = document.getElementById('cb' + i);
+						box.checked = false;
+					}
+					for(var j=1; j<10; j++)
+						clean(i, j);
+				}
+				TurnOffPossibilities();
+				fill();
+			}
+		/*	function chartoint(ch){
+				switch(ch)
+				{
+					case '0': return 0; break;
+					case '1': return 1; break;
+					case '2': return 2; break;
+					case '3': return 3; break;
+					case '4': return 4; break;
+					case '5': return 5; break;
+					case '6': return 6; break;
+					case '7': return 7; break;
+					case '8': return 8; break;
+					case '9': return 9; break;
+					default:{ alert(ch + ' не цифра'); return null; break;}
+				}
+			}
+			function ch(c){
+				var answer=parseInt(c);
+				var toadd;
+				if(answer)
+				{
+					if(c.length>1)
+						toadd='Введено больше одного знака';
+					else
+						toadd='Нет такой цифры в 10-ричной системе счисления';
+					alert(toadd);
+				}
+				else
+				{
+					if(answer>5)
+						alert('Вы получили ответ ' + answer + ' И это больше чем 5');
+					else
+						alert('Вы получили ответ ' + answer + ' И это меньше чем 5');
+				}
+			}
+			function trymyfunc(){
+			//	trialarr = {0};
+				if(confirm('It will take some time...\nAre you ready to wait?'))
+				{
+				for(var i=0; i<9; i++)
+				{
+					trialarr[i] = [0,0];
+					for(var j=0; j<9; j++)
+					{
+						trialarr[i][j] = [0,0];
+						for(var k=0; k<10; k++)
+						{
+							trialarr[i][j][k]=k;
+						}
+					}
+				}
+				alert(trialarr);
+				}
+			}
+			function trymyfunc1(){
+				for(var i=0; i<9; i++)
+					for(var j=0; j<9; j++)
+						for(var k=0; k<10; k++)
+							 arrtotry[i][j][k]=k;
+				alert(arrtotry);
+			}
+			function arrcheck(){
+				alert('trialarr = \n' + trialarr);
+				alert('arrtotry = \n' + arrtotry);
+			}*/
+			/*
+				Fills all cells with the numbers that in the table on the page.
+			*/
+			function fill(){
+				var i, j, k;
+				for(var i=1; i<=9; i++)
+				{
+					for(var j=1; j<=9; j++)
+					{
+						var incell = document.getElementById('inval' + i + j);
+						var cellvalue = parseInt(incell.innerHTML);
+						if(cellvalue)
+						{
+							acceptnum(i,j,cellvalue);
+						}
+					}
+				}
+				for(i=0; i<9; i++)
+					possibilities[i]=[0,0];
+				for(i=0; i<9; i++)
+					for(j=0; j<9; j++)
+						possibilities[i][j]=[0,0];
+				for(i=0; i<9; i++)
+					for(j=0; j<9; j++)
+					{
+						for(k=0; k<10; k++)
+						{
+							if(k==0)
+								possibilities[i][j][k] = 0;
+							else
+								possibilities[i][j][k] = 1;
+						}
+					}
+				for(i=0; i<9; i++)
+					for(j=0; j<9; j++)
+					{
+						possibilities[i][j][0]=arr[i+1][j+1];
+						if(arr[i+1][j+1]!=0)
+						{
+							fitposition(i, j, arr[i+1][j+1]);
+						}
+					}
+			}
+			/*
+				Shows numbers that are possible to put in empty cells.
+			*/
+			function TurnOnPossibilities(){
+				fill();
+				var x,y;
+				var posible, parent, existing, value_to_insert;
+				for(var row=0; row<9; row++)
+				{
+					for(var col=0; col<9; col++)
+					{
+						if(possibilities[row][col][0]==0)
+						{
+							x=row+1;
+							y=col+1;
+							posible = document.getElementById('pos' + x + y);
+							if(posible==null)
+							{
+								posible = document.createElement('div');
+								posible.className = 'posibilityes';
+								posible.id = 'pos' + x + y;
+								value_to_insert = 'insertnum(' + x + ',' + y + ')';
+								posible.setAttribute("ondblclick", value_to_insert);
+							}
+							existing = document.getElementById('inval' + x + y);
+							existing.style.display = 'none';
+							parent = document.getElementById('c' + x + y);
+							parent.appendChild(posible);
+							posible.style.display = '';
+							posible.innerHTML = '';
+							for(var i=1; i<=10; i++)
+							{
+								if(possibilities[row][col][i])
+									posible.innerHTML = posible.innerHTML + i/* + ','*/;
+							}
+						}
+					}
+				}
+				var button = document.getElementById('onoffposibilityes');
+				button.value = 'Turn off possibilities';
+				button.setAttribute("onclick", "TurnOffPossibilities()");
+				possible_off = false;
+				var table = document.getElementById('tbhighlight');
+				table.style.display = '';
+			}
+			/*
+				Hides numbers that are possible to put in empty cells.
+			*/
+			function TurnOffPossibilities(){
+				for(var row=1; row<=9; row++)
+					for(var col=1; col<=9; col++)
+					{
+						var possible = document.getElementById('pos' + row + col);
+						if(possible)
+						{
+							possible.style.display = 'none';
+							var existing = document.getElementById('inval' + row + col);
+							existing.style.display = '';
+						}
+					}
+				var button = document.getElementById('onoffposibilityes');
+				button.value = 'Turn on possibilities';
+				button.setAttribute("onclick", "TurnOnPossibilities()");
+				possible_off = true;
+				var table = document.getElementById('tbhighlight');
+				table.style.display = 'none';
+			}
+			function SaveToFile(){
+				fill();
+				var array_grid = [];
+				var ts;
+				for(var row = 0; row < 9; row++)
+				{
+					for(var col = 0; col < 9; col++)
+					{
+						array_grid[row * 9 + col] = arr[row+1][col+1];
+					}
+				}
+				var axo = new ActiveXObject("Scripting.FileSystemObject");
+				if(axo.FileExists("d:\\SudokuDB.txt"))
+				{
+					alert('File exists');
+					ts = axo.OpenTextFile("d:\\SudokuDB.txt", 8);
+				}
+				else
+				{
+					alert('File NOT exists.\nCreating');
+					ts = axo.CreateTextFile("d:\\SudokuDB.txt", false);
+				}
+				ts.WriteLine(array_grid);
+				ts.Close();
+				alert('File closed');
+			}
+			
+			function RestartGame(){
+				for(var row = 1; row < 10; row++)
+				{
+					for(var col = 1; col<10; col++)
+					{
+						var cell = document.getElementById('inval' + row + col);
+						if(arr[row][col])
+						{
+							cell.innerHTML = arr[row][col];
+						}
+						else
+						{
+							cell.innerHTML = '&nbsp;';
+						}
+					}
+				}
+			}
+			function HighlightPosible(number){
+				number = parseInt(number);
+				if(!possible_off)
+				{
+				//	alert('I should highlight all cells where possible to put ' + number);
+					for(var row = 0; row < 9; row++)
+					{
+						for(var col = 0; col < 9; col++)
+						{
+							var x = row + 1;
+							var y = col + 1;
+							if(possibilities[row][col][number])
+							{
+								var cell = document.getElementById('c' + x + y);
+								cell.bgColor = '#FFC054'; // #ffa500
+							}
+							else if(possibilities[row][col][0] == number)
+							{
+								var cell = document.getElementById('c' + x + y);
+								cell.bgColor = '#007fff';
+							}
+						}
+					}
+				}
+			}
+			function UnhighlightPosible(number){
+				number = parseInt(number);
+				if(!possible_off)
+				{
+				//	alert('I should highlight all cells where possible to put ' + number);
+					for(var row = 0; row < 9; row++)
+					{
+						for(var col = 0; col < 9; col++)
+						{
+							var x = row + 1;
+							var y = col + 1;
+							var cell = document.getElementById('c' + x + y);
+							cell.bgColor = '';
+						}
+					}
+				}
+			}
+			function CheckAll(){
+				for(var i=1; i<5; i++)
+				{
+					var cbox = document.getElementById('cb' + i);
+					cbox.checked = true;
+				}
+			}
+			function rotateAroundMainDiagonal(){
+				var temp = [[0,0],[0,0]];
+				
+				for(var i = 0; i<9; i++)
+				{
+					temp[i] = [0,0];
+				}
+				for(var i = 0; i<9; i++)
+				{
+					for(var j = 0; j<9; j++)
+					{
+						temp[i][j] = dbfilled[i*9 + j];
+					}
+				}
+				for(var i = 0; i<9; i++)
+				{
+					for(var j = 0; j<9; j++)
+					{
+						dbfilled[i*9 + j] = temp[j][i];
+					}
+				}
+			}
+			var mix_numbers_interations = 0;
+			function mixNumbers(){
+				//dbfilled
+				changeBigRows();
+				changeSmallRows();
+				rotateAroundMainDiagonal();
+				mix_numbers_interations--;
+				if(mix_numbers_interations>0)
+				{
+					window.setTimeout("mixNumbers()", 1);
+				}
+			}
+			function convertBigAndSmallRowToSmall(big, small){
+				var converted_small;
+				converted_small = big * 3 + small;
+				return converted_small;
+			}
+			function changeSmallRows(){
+				for(var big_row = 0; big_row < 3; big_row++)
+				{
+					var small_row1 = -1, small_row2 = -1;
+					while(small_row1 == small_row2)
+					{
+						small_row1 = randomNumInRange(0,2);
+						small_row2 = randomNumInRange(0,2);
+					}
+					var converted_row1 = convertBigAndSmallRowToSmall(big_row, small_row1);
+					var converted_row2 = convertBigAndSmallRowToSmall(big_row, small_row2);
+				//	alert('Switching two small rows:\n' + converted_row1 + '\n' + converted_row2);
+					switchRows(converted_row1, converted_row2, false);
+				}
+			}
+			function changeBigRows(){
+				var big_row1 = -1, big_row2 = -1;
+				while(big_row1 == big_row2)  // To switch two big rows it has to be choosen two DIFFERENT big rows. If the same row been choosen twice, process of choosing will be repeted untill two different rows choosen.
+				{
+					big_row1 = randomNumInRange(2);
+					big_row2 = randomNumInRange(2);
+				}
+				// alert('Choosen two big rows:\n' + big_row1 + '\n' + big_row2);
+				switchRows(big_row1, big_row2, true);
+			}
+			function rowRange(n, big){
+				var length;
+				if(big)
+				{
+					length = 27;
+					//bigRowRange(n);
+				}
+				else
+				{
+					length = 9;
+					//smallRowRange(n);
+				}
+				this.start = n*length;
+				if((big && n < 2) || (!big && n < 8))
+					this.end = this.start + length;
+				else
+					this.end = -1;
+			}
+			function switchRows(num_of_row1, num_of_row2, big){
+				// var start_value1, start_value2;
+				// var end_value1, end_value2;
+				var row1 = new rowRange(num_of_row1, big);
+				var row2 = new rowRange(num_of_row2, big);
+				var length;
+				if(big)
+				{
+					length = 27;
+				}
+				else
+				{
+					length = 9;
+				}
+				var arr1, arr2;
+				if(row1.end!==-1)
+				{
+					arr1 = dbfilled.slice(row1.start, row1.end);
+				}
+				else
+				{
+					arr1 = dbfilled.slice(row1.start);
+				}
+				if(row2.end!==-1)
+				{
+					arr2 = dbfilled.slice(row2.start, row2.end);
+				}
+				else
+				{
+					arr2 = dbfilled.slice(row2.start);
+				}
+				for(var i = row1.start, j = 0; i < row1.start+length; i++, j++)
+				{
+					dbfilled.splice(i,1,arr2[j]);
+				}
+				for(var i = row2.start, j = 0; i < row2.start+length; i++, j++)
+				{
+					dbfilled.splice(i,1,arr1[j]);
+				}
+			}
+			var level_to_alert;
+			function ChooseLevel(){
+				//alert(document.levels.level[0].checked + '\n' + document.levels.level[1].checked + '\n' + document.levels.level[2].checked);
+				//alert(lvlbox[0].status + '\n' + lvlbox[1].status + '\n' + lvlbox[2].status + '\n');
+				var lvl=-1;
+				for(var i=0; i<3; i++)
+				{
+					if(document.levels.level[i].checked)
+						lvl = i;
+				}
+				lvl++;
+				//alert(lvl);
+				if(lvl)
+				{
+					var cbox = document.getElementById('cb' + 1);
+					cbox.checked = true;
+					cbox = document.getElementById('cb' + 2);
+					cbox.checked = true;
+					if(lvl>1)
+					{
+						cbox = document.getElementById('cb' + 3);
+						cbox.checked = true;
+						if(lvl>2)
+						{
+							cbox = document.getElementById('cb' + 4);
+							cbox.checked = true;
+						}
+					}
+					switch(lvl)
+					{
+						case 1:{
+							holes = 31;
+							break;
+						}
+						case 2:{
+							holes = 41;
+							break;
+						}
+						case 3:{
+							holes = 51;
+							break;
+						}
+					}
+					level_to_alert = lvl;
+					return true;
+				}
+				else
+				{
+					alert('Please choose the level of game');
+					return false;
+				}
+			}
+			function RandomlyRefill(){
+				var arr = [-1,0,0,0,0,0,0,0,0,0];
+				for(var i = 1; i<10; i++)
+				{
+					var empty_cells = [0];
+					var empt_c_index = 0;
+					for(var j = 1; j<10; j++)
+					{
+						if(arr[j] == 0)
+						{
+							empty_cells[empt_c_index] = j;
+							empt_c_index++;
+						}
+					}
+					// alert('i = ' + i + '\narr = ' + arr + '\nempty_cells = ' + empty_cells + '\nempty_cells.length = ' + empty_cells.length);
+					arr[empty_cells[randomNumInRange(0,(empty_cells.length-1))]] = i;
+				}
+				// alert('Randomly filled array is\n' + arr);
+				for(var i=0; i<81; i++)
+				{
+					dbfilled[i] = arr[dbfilled[i]];
+				}
+			}
+			function CreateGame(){
+				stop_flag = true;
+				var start = new Date();
+			//	alert('Thank you for using our game');
+				if(ChooseLevel())
+				{
+					var img_loading = document.getElementById('loading');
+					img_loading.style.display = '';
+					mix_numbers_interations = 100;
+					RandomlyRefill();
+					mixNumbers(mix_numbers_interations);
+					var open_close=[0,0];
+					var count_holes=0;
+					for(var i = 0; i < 9; i++) // Initializing open_close
+					{
+						open_close[i] = [0,0];
+						for(var j = 0; j < 9; j++)
+						{
+							open_close[i][j] = 1;
+							db[i*9+j] = dbfilled[i*9+j];
+						}
+					}
+					do{
+					//	alert(open_close[0]+'\n'+open_close[1]+'\n'+open_close[2]+'\n'+open_close[3]+'\n'+open_close[4]+'\n'+open_close[5]+'\n'+open_close[6]+'\n'+open_close[7]+'\n'+open_close[8]);
+					//	alert(db);
+						var row, col;
+						do{ // Choose random cell
+							row = RandomNum1();
+							col = RandomNum1();
+						//	alert('row = ' + row + '\ncol = ' + col + '\nopen_close[' + row + '][' + col + '] = '+ open_close[row][col]);
+						}while(!open_close[row][col]) // If choosen cell already has hole - choose another one
+					//	alert('row = ' + row + '\ncol = ' + col);
+						db[row*9+col] = 0;
+						open_close[row][col] = 0;
+					//	alert(open_close[0]+'\n'+open_close[1]+'\n'+open_close[2]+'\n'+open_close[3]+'\n'+open_close[4]+'\n'+open_close[5]+'\n'+open_close[6]+'\n'+open_close[7]+'\n'+open_close[8]);
+					//	alert(db);
+						cleanall();
+					//	alert('All fields was cleaned');
+						fillDB();
+					//	alert('All fields was filled from db array');
+						fill();
+						ChooseLevel();
+						var solvable = solve();
+						if(solvable)
+						{
+							count_holes++;
+						//	alert('Added hole to counter in [' + row + '][' + col + ']');
+						}
+						else
+						{
+							db[row*9+col] = dbfilled[row*9+col];
+							open_close[row][col] = 1;
+						//	alert('Closed hole in [' + row + '][' + col + ']');
+						}
+					//	alert('count_holes = ' + count_holes);
+					}while(count_holes<holes)
+					for(var i = 0; i < 9; i++)
+					{
+						for(var j = 0; j < 9; j++)
+						{
+							if(open_close[i][j])
+							{
+								db[i*9+j] = dbfilled[i*9+j];
+							}
+							else
+							{
+								db[i*9+j] = 0;
+							}
+						}
+					}
+					fillDB();
+					fill();
+					img_loading.style.display = 'none';
+					var finish = new Date();
+					var start_ms = start.getTime();
+					var end_ms = finish.getTime();
+					var time_spent = end_ms - start_ms;
+					// time_spend = Math.round(time_spend/1000);
+				//	alert('Game created.\nStart time\n' + start_ms + '\nFinish time\n ' + end_ms + '\nTime spent ' + time_spent + ' ms\n Amount of holes ' + count_holes);
+					switch(level_to_alert){
+						case 1:{
+							level_to_alert = 'Easy';
+							break;
+						}
+						case 2:{
+							level_to_alert = 'Medium';
+							break;
+						}
+						case 3:{
+							level_to_alert = 'Hard';
+							break;
+						}
+					}
+					var browser = navigator.appName + ' ' + navigator.appVersion;
+					var information_about_game_box = document.getElementById('message');
+					information_about_game_box.innerHTML = 'Browser: ' + browser + '<br>' + 'Level: ' + level_to_alert + '<br>Time spent for creation: ' + time_spent + ' ms';
+					// alert('Game created.\nLevel ' + level_to_alert + '\nTime spent for creation ' + time_spent + ' ms\n Amount of holes ' + count_holes);
+					
+					lockNumbers();
+					var timer_box = document.getElementById('timed');
+					var timer = document.getElementById('timer');
+					if(timer_box.checked)
+					{
+						timer.style.display = '';
+						start_timer();
+					}
+					else
+					{
+						timer.style.display = 'none';
+						stop_timer();
+					}
+				}
+			//	alert(open_close[0]+'\n'+open_close[1]+'\n'+open_close[2]+'\n'+open_close[3]+'\n'+open_close[4]+'\n'+open_close[5]+'\n'+open_close[6]+'\n'+open_close[7]+'\n'+open_close[8]);
+			}
+			function lockNumbers(){
+				for(var i = 1; i<=9; i++)
+				{
+					for(var j = 1; j<=9; j++)
+					{
+						var cell = document.getElementById('inval' + i + j);
+						var value = parseInt(cell.innerHTML);
+						if(value)
+						{
+							cell.setAttribute("onClick","");
+							cell.setAttribute("onDblclick","");
+							cell.style.color = '';
+							// alert('The attributes was removed from\n' + i + ' ' + j + '\nwith value ' + value);
+							// cell = document.getElementById('c' + i + j);
+							// cell.bgColor = 'yellow';
+						}
+						else
+						{
+							cell.style.color = '';// onclick="clean(3,4)" ondblclick="insertnum(3,4)"
+							var click_value = 'clean(' + i + ',' + j + ');';
+							var dbclick_value = 'insertnum(' + i + ',' + j + ');';
+							cell.setAttribute("onClick",click_value);
+							cell.setAttribute("onDblclick",dbclick_value);
+						}
+					}
+				}
+			}
+			/*
+				Returns random 1-digit number
+			*/
+			function RandomNum(){
+				var num;
+				do{
+					var num = Math.round(Math.random()*10);
+				}while(num>9)
+			//	alert(num);
+				return num;
+			}
+			function RandomNum1(){
+				var num;
+				do{
+					var num = Math.round(Math.random()*10);
+				}while(num>8)
+			//	alert(num);
+				return num;
+			}
+			function randomNumInRange(n1, n2){
+				var min, max;
+				if(!n2 && n2!==0)
+				{
+					min = 0;
+					max = n1;
+				}
+				else if(n1>n2)
+				{
+					min = n2;
+					max = n1;
+				}
+				else if(n2>n1)
+				{
+					min = n1;
+					max = n2;
+				}
+				else
+				{
+					min = n1;
+					max = n1;
+				}
+				// alert('min = ' + min + '\nmax = ' + max);
+				var result = Math.round (Math.random() * (max - min)) + min;
+				result = parseInt(result);
+				return result;
+			}
+			var str;
+
+			/*------------------------------------------------------------------------------------------------*\
+			****************************************RANGE CONSTRUCTORS****************************************
+			\*------------------------------------------------------------------------------------------------*/
+			/*
+				Constructor for Object Range with 4 atributes. All the atributes together determine the square that contains cell:
+				minrow - minimum row value - the lowest row of the square that contains the cell.
+				maxrow - maximum row value - the highest row of the square that contains the cell.
+				mincol - minimum column value - the lowest column of the square that contains the cell.
+				maxcol - maximum column value - the highest column of the square that contains the cell.
+				Receives row, col.
+			*/
+			function range(row, col){
+				this.minrow = (row<4)?(1):((row<7)?(4):(7));
+				this.maxrow = (row<4)?(3):((row<7)?(6):(9));
+				this.mincol = (col<4)?(1):((col<7)?(4):(7));
+				this.maxcol = (col<4)?(3):((col<7)?(6):(9));
+			}
+			/*
+				Constructor for one axis range when inputed the long side (that contains only 3 positions 0-2) of blocks array.
+			*/
+			function OneAxisRangeConvertFromBlocks(block_num){
+				switch(block_num)
+				{
+					case 0:{
+						this.minimum = 0;
+						this.maximum = 2;
+						break;
+					}
+					case 1:{
+						this.minimum = 3;
+						this.maximum = 5;
+						break;
+					}
+					case 2:{
+						this.minimum = 6;
+						this.maximum = 8;
+						break;
+					}
+				}
+			}
+			/*
+			*/
+			function OneAxisRange(one_axis){
+				this.minimum = (one_axis<4)?(0):((one_axis<7)?(3):(6));
+				this.maximum = (one_axis<4)?(2):((one_axis<7)?(5):(8));
+			}
+
+			var dbfilled = [6,9,3,7,4,8,1,2,5,8,7,4,1,2,5,9,6,3,2,5,1,6,3,9,8,7,4,7,6,8,5,1,3,2,4,9,3,1,2,4,9,6,5,8,7,5,4,9,8,7,2,3,1,6,1,2,5,9,6,7,4,3,8,9,3,6,2,8,4,7,5,1,4,8,7,3,5,1,6,9,2];
+		//	var dbfilled = [1,2,3,4,5,6,7,8,9,7,8,9,1,2,3,4,5,6,4,5,6,7,8,9,1,2,3,3,1,2,6,4,5,9,7,8,9,7,8,3,1,2,6,4,5,6,4,5,9,7,8,3,1,2,2,3,1,5,6,4,8,9,7,8,9,7,2,3,1,5,6,4,5,6,4,8,9,7,2,3,1];
+			
+			var db =[];
+			
+		//	var db = [8,0,5, 0,1,0, 6,0,0, 6,0,0, 0,0,5, 0,3,4, 0,4,0, 0,0,0, 0,0,0, 0,0,0, 0,7,0, 0,0,1, 2,8,0, 0,0,0, 0,6,5, 4,0,0, 0,8,0, 0,0,0, 0,0,0, 0,0,0, 0,5,0, 9,7,0, 6,0,0, 0,0,8, 0,0,4, 0,2,0, 9,0,3]; // To check open pairs in rows
+
+		//	var db = [0,4,0, 1,5,0, 0,8,3, 0,3,0, 0,6,0, 5,0,0, 6,0,0, 0,0,0, 0,0,9, 0,5,0, 0,0,0, 0,0,0, 1,0,0, 7,0,8, 0,0,2, 0,0,0, 0,0,0, 0,6,0, 5,0,0, 0,0,0, 0,0,4, 0,0,4, 0,8,0, 0,7,0, 8,6,0, 0,2,4, 0,9,0]; // To check open pairs in column and in squares
+
+		//	var db = [6,1,0, 0,0,0, 0,0,9, 0,0,4, 0,0,0, 1,0,0, 0,0,0, 9,0,0, 0,6,2, 0,0,8, 0,4,9, 0,0,1, 0,0,0, 0,5,3, 0,0,0, 7,0,0, 0,8,6, 5,0,0, 2,4,0, 8,0,0, 0,0,0, 0,0,5, 0,0,0, 3,0,0, 3,0,0, 0,0,0, 0,1,7]; // To check vertically locked candidate Capture2
+
+		//	var db = [2,0,8, 0,1,0, 0,4,0, 0,0,0, 0,0,0, 0,7,0, 0,1,0, 5,9,0, 0,0,0, 6,0,2, 0,0,4, 7,0,0, 0,5,0, 1,0,6, 0,8,0, 0,0,9, 3,0,0, 2,0,4, 0,0,0, 0,5,1, 0,9,0, 0,2,0, 0,0,0, 0,0,0, 0,6,0, 0,3,0, 5,0,8]; // Capture 6 rotated counterclockwise 90 degrees for checking horizontal blocks
+
+		//	var db = [0,0,0, 5,0,0, 0,6,0, 8,0,9, 0,0,0, 0,1,0, 1,6,0, 0,8,7, 0,0,0, 3,0,0, 0,2,6, 0,0,0, 0,0,7, 0,1,0, 6,0,0, 0,0,0, 8,5,0, 0,0,3, 0,0,0, 4,7,0, 0,2,1, 0,4,0, 0,0,0, 9,0,8, 0,8,0, 0,0,3, 0,0,0]; // To check open threes in rows Fiendish 1
+
+		//	var db = [9,1,0, 0,0,0, 0,5,0, 0,0,3, 0,0,9, 0,2,1, 0,0,0, 4,0,2, 0,0,0, 0,8,0, 0,4,0, 9,0,2, 0,0,0, 0,7,0, 0,0,0, 5,0,4, 0,6,0, 0,1,0, 0,0,0, 5,0,6, 0,0,0, 2,5,0, 7,0,0, 8,0,0, 0,3,0, 0,0,0, 0,9,5]; // To check open 4 in square (right bottom square) Fiendish 3
+
+		//	var db = [9,3,0, 0,0,4, 0,0,0, 0,0,7, 5,0,0, 3,9,0, 0,0,0, 0,9,0, 0,0,7, 6,0,0, 0,3,0, 1,8,0, 4,0,0, 0,0,0, 0,0,3, 0,9,5, 0,1,0, 0,0,2, 7,0,0, 0,8,0, 0,0,0, 0,1,4, 0,0,9, 6,0,0, 8,0,0, 2,0,0, 0,1,5]; // Have no idea what it checks 7 should be putten in cell with most possible values.
+
+		//	var db = [0,0,0, 7,4,0, 0,0,0, 0,0,4, 0,0,0, 0,6,3, 2,0,0, 0,0,9, 8,0,0, 7,6,0, 5,0,0, 0,0,9, 0,1,0, 0,0,0, 0,8,0, 5,0,0, 0,0,2, 0,1,6, 0,0,5, 9,0,0, 0,0,8, 9,3,0, 0,0,0, 7,0,0, 0,0,0, 0,5,1, 0,0,0]; // Capture3 Have no idea what it checks ***********2
+		
+		//	var db = [0,2,6, 7,0,0, 0,4,0, 0,0,0, 0,0,0, 0,0,5, 9,0,0, 0,0,3, 8,0,0, 0,0,9, 4,0,0, 0,3,1, 0,0,7, 9,0,6, 4,0,0, 5,1,0, 0,0,8, 9,0,0, 0,0,8, 3,0,0, 0,0,6, 4,0,0, 0,0,0, 0,0,0, 0,9,0, 0,0,2, 5,8,0]; // Capture7 colored markers = try one of the options
+		
+		//	var db = [8,4,6,1,0,0,0,3,0,0,5,0,0,0,2,1,0,0,0,0,0,9,4,0,0,0,0,6,1,5,0,0,0,0,4,0,0,0,3,0,0,0,6,0,0,0,8,0,0,0,0,7,1,2,0,0,0,0,2,8,0,0,0,0,0,2,3,0,0,0,6,0,0,3,0,0,0,1,4,2,7]; // First 2 is enought
+		
+		//	var db = [0,0,0,0,0,9,0,4,0,0,6,0,0,0,1,7,0,0,0,0,0,7,4,0,0,0,2,0,9,5,6,1,0,0,0,3,0,7,6,0,8,0,2,1,0,1,0,0,0,7,5,9,6,0,5,0,0,0,3,6,0,0,0,0,0,9,1,0,0,0,5,0,0,8,0,5,0,0,0,0,0]; // Have no idea what it checks. *************1
+		
+		//	var db = [0,0,8,4,0,0,3,5,0,0,0,4,3,5,0,0,8,7,0,0,0,0,0,9,0,4,1,0,3,7,0,0,8,0,2,0,0,0,0,5,0,7,0,0,0,0,5,0,6,0,0,4,7,0,7,9,0,8,0,0,0,0,0,4,1,0,0,6,5,8,0,0,0,8,6,0,0,3,7,0,0]; // First 2 is enought
+		
+		//	var db = [0,2,0,0,0,0,0,0,0,9,0,0,3,0,0,0,0,0,5,6,0,1,9,0,7,0,8,7,0,0,2,3,0,0,1,0,4,0,0,7,0,8,0,0,9,0,5,0,0,4,1,0,0,7,8,0,7,0,1,3,0,6,2,0,0,0,0,0,4,0,0,5,0,0,0,0,0,0,0,4,0]; // Have no idea what it checks. ************3
+		
+		//	var db = [0,0,1,9,0,0,3,0,7,0,0,0,0,7,0,9,6,0,7,0,0,8,0,0,0,2,0,0,0,0,0,5,0,6,4,0,2,0,0,6,0,3,0,0,9,0,3,6,0,1,0,0,0,0,0,7,0,0,0,2,0,0,1,0,2,8,0,9,0,0,0,0,1,0,9,0,0,7,2,0,0]; // Have no idea what it checks.
+		
+		//	var db = [3,1,5,0,0,0,0,6,0,9,0,0,0,0,0,0,0,0,0,6,2,3,0,1,0,0,8,1,0,0,5,0,6,0,9,0,0,0,4,2,0,9,7,0,0,0,3,0,4,0,7,0,0,6,7,0,0,8,0,4,6,5,0,0,0,0,0,0,0,0,0,7,0,4,0,0,0,0,2,3,9]; // First 3 is enought
+		
+		//	var db = [0,0,0,0,0,0,0,0,9,3,4,0,9,0,0,5,2,0,0,0,0,0,2,1,0,0,3,8,0,0,4,1,2,0,7,0,0,7,0,5,0,9,0,1,0,0,2,0,8,7,6,0,0,4,4,0,0,2,9,0,0,0,0,0,6,3,0,0,4,0,5,2,2,0,0,0,0,0,0,0,0]; // Have no idea what it checks.
+		
+		//	var db = [0,5,9,0,0,4,7,6,0,4,0,0,6,7,0,0,0,0,0,7,0,0,2,0,0,4,1,0,0,0,0,0,0,5,2,9,0,8,0,0,0,0,0,7,0,9,3,5,0,0,0,0,0,0,7,9,0,0,3,0,0,5,0,0,0,0,0,9,7,0,0,4,0,2,4,1,0,0,8,9,0]; // First 2 is enought
+		
+		//	var db = [0,6,0,2,0,0,0,0,8,9,3,0,0,5,0,0,0,0,0,0,2,0,0,1,3,0,0,0,7,0,0,3,0,0,5,6,6,0,0,1,0,5,0,0,9,5,1,0,0,2,0,0,8,0,0,0,6,5,0,0,4,0,0,0,0,0,0,1,0,0,6,2,3,0,0,0,0,2,0,9,0]; // First 3 is enought
+		
+		//	var db = [0,0,5,0,6,0,2,0,7,0,0,7,0,0,2,0,0,0,2,0,0,7,0,3,0,0,4,8,0,9,0,0,0,0,0,6,3,0,0,9,4,6,0,0,8,5,0,0,0,0,0,1,0,3,4,0,0,6,0,8,0,0,5,0,0,0,1,0,0,6,0,0,6,0,8,0,7,0,4,0,0]; // First 2 is enought
+		
+		//	var db = [0,0,2,0,0,6,8,0,0,6,0,0,0,2,0,5,7,0,0,5,3,0,0,7,2,0,0,0,2,0,5,0,0,0,0,3,0,0,6,2,3,1,4,0,0,3,0,0,0,0,8,0,2,0,0,0,8,7,0,0,9,1,0,0,6,7,0,1,0,0,0,4,0,0,4,3,0,0,7,0,0]; // First 2 is enought
+		
+		//	var db = [0,8,0,0,0,2,7,0,0,5,0,3,7,0,0,4,0,0,0,6,7,0,5,0,0,0,3,6,9,0,0,7,4,0,0,5,0,0,5,0,0,0,1,0,0,2,0,0,9,1,0,0,7,4,3,0,0,0,2,0,8,6,0,0,0,2,0,0,6,5,0,7,0,0,6,5,0,0,0,3,0]; // Have no idea what it checks.
+		
+		//	var db = [1,0,2,5,0,0,9,0,0,0,0,3,0,0,0,0,0,0,9,4,0,2,0,8,1,0,0,0,1,0,6,2,0,7,0,9,0,0,9,8,0,5,6,0,0,6,0,7,0,4,1,0,2,0,0,0,8,4,0,6,0,9,1,0,0,0,0,0,0,2,0,0,0,0,6,0,0,2,4,0,8]; // Have no idea what it checks.
+		
+			var possible_off = true;
+			
+			var arr =	[[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]],
+						[[0],[0],[0],[0],[0],[0],[0],[0],[0],[0]]];
+			//document.body.disableSelection();
+			var possibilities = [0,0];
+			var trialarr = [0,0];
+			var arrtotry = new Array(9);
+			for(var i = 0; i < arrtotry.length; i++)
+				arrtotry[i] = new Array(9);
+			for(var i=0; i<arrtotry.length; i++)
+				for(var j=0; j<arrtotry[i].length; j++)
+					arrtotry[i][j] = new Array(10);
+			window.onresize = function(){
+										checkwidth();//
+									}
+			var stop_flag = true;
+			var seconds = 0;
+			var minutes = 0;
+			var hours = 0;
+			
+			function start_timer(){
+				seconds = 0;
+				minutes = 0;
+				hours = 0;
+				
+				var h = document.getElementById('hour');
+				var m = document.getElementById('minute');
+				var s = document.getElementById('second');
+				
+				h.innerHTML = '00';
+				m.innerHTML = '00';
+				s.innerHTML = '00';
+				
+				stop_flag = false;
+				window.setTimeout("timer()", 1000);
+				// var button = document.getElementById('timer_button');
+				// button.setAttribute("onclick", "stop_timer()");
+				// button.setAttribute("value", "Stop timer");
+			}
+			function stop_timer(){
+				stop_flag = true;
+				// var button = document.getElementById('timer_button');
+				// button.setAttribute("onclick", "start_timer()");
+				// button.setAttribute("value", "Start timer");
+			}
+			
+			function timer(){
+				if(!stop_flag)
+				{
+					seconds++;
+					if(seconds == 60)
+					{
+						seconds = 0;
+						minutes++;
+						if(minutes == 60)
+						{
+							minutes = 0;
+							hours++;
+						}
+					}
+					var h = document.getElementById('hour');
+					var m = document.getElementById('minute');
+					var s = document.getElementById('second');
+					
+					h.innerHTML = (hours>9)?(hours):('0' + hours);
+					m.innerHTML = (minutes>9)?(minutes):('0' + minutes);
+					s.innerHTML = (seconds>9)?(seconds):('0' + seconds);
+					
+					if(!stop_flag)
+					{
+						window.setTimeout("timer()", 1000);
+					}
+				}
+			}
+			function pause_timer(){
+				if(stop_flag)
+				{//unpause
+					stop_flag = false;
+					window.setTimeout("timer()", 1000);
+					var button = document.getElementById('pause_button');
+					button.setAttribute("onclick", "pause_timer()");
+					button.setAttribute("value", "Pause game");
+					// id="paused">not_paused">
+					var message = document.getElementById('paused');
+					var game_grid = document.getElementById('not_paused');
+					message.style.display = 'none';
+					game_grid.style.display = '';
+					var start_button = document.getElementById('game_buttons');
+					start_button.style.display = '';
+				}
+				else
+				{//pause
+					stop_flag = true;
+					var button = document.getElementById('pause_button');
+					button.setAttribute("onclick", "pause_timer()");
+					button.setAttribute("value", "Continue game");
+					var message = document.getElementById('paused');
+					var game_grid = document.getElementById('not_paused');
+					message.style.display = '';
+					game_grid.style.display = 'none';
+					var start_button = document.getElementById('game_buttons');
+					start_button.style.display = 'none';
+				}
+			}
+		</script>
+
+		<style type="text/css">
+			.button{
+				width: 200px;
+				margin: 5px;
+			}
+			td{
+				text-align: center;
+			}
+			option{
+				border: 1px solid #FFFFFF;
+			}
+			.mediumtab{
+				border-collapse: collapse; border: 1px solid #000;
+				height: 180px;
+				width: 180px;
+			}
+			.opttab{
+				border-collapse: collapse; border: 1px solid #000;
+				height: 100%;
+				width: 100%;
+				background-color: white;
+			}
+			.optcel{
+				font-size: 10px;
+				font-weight: bold;
+			}
+			.optcel:hover{
+				background: #9696FF;
+			}
+			.numcell{
+				height: 60px;
+				width: 60px;
+			}
+			.mediumtab, .opttab, .optcel, .numcell, .posibilityes {
+				-webkit-touch-callout: none;
+					-webkit-user-select: none;
+					-khtml-user-select: none;
+					-moz-user-select: none;
+						-ms-user-select: none;
+						-o-user-select: none;
+							user-select: none;
+			}
+			#filecont{
+				-webkit-touch-callout: text;
+					-webkit-user-select: text;
+					-khtml-user-select: text;
+					-moz-user-select: text;
+						-ms-user-select: text;
+						-o-user-select: text;
+							user-select: text;
+			}
+			.invalue, .optcel, .posibilityes{
+				cursor: pointer;
+			}
+			.invalue, .posibilityes{
+				width: 60px;
+				height: 60px;
+				display: table-cell;
+				vertical-align: middle;
+				text-align: center;
+				font-size: 38px;
+			}
+			.posibilityes{
+				font-size: 10px;
+				font-family: sans-serif;
+				font-weight: bold;
+			}
+		</style>
+	</head>
+	<body onload="checkwidth()" id="body" class="unselectable">
+		<div style="position: absolute; top:0; right:0; height:10px; width:10px; cursor:text" onclick="hidden_solv=true;solve();">
+		</div>
+<!-- 		<p>
+			Sudoku solver
+		</p> -->
+		<img style="display:none; position: absolute; margin-left:545px; margin-top:200px;" id="loading" src="Loading.gif"/>
+		<table id="maintable" style="border-collapse: collapse; border: 1px solid rgb(0, 0, 0); cursor: default; float: right; font-weight: 900; font-family: fantasy; margin-right: 362px;" align="center" border="1" cellpadding="0" cellspacing="0" height="540" width="540">
+			<tr style="display:none;font-family: sans-serif;" id="paused">
+				<td valign="middle" align="center" style="font-size:25px;">
+					Game paused
+				</td>
+			</tr>
+		<tbody id="not_paused">
+			<tr>
+				<td>
+					<table id="t1" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c11" class="numcell" onmouseover="highlight(1,1,1)" onmouseout="unhighlight(1,1,1)">
+								<table id="intab11" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval11" class="invalue" onclick="clean(1,1)" ondblclick="insertnum(1,1)">&nbsp;</div>
+							</td>
+							<td id="c12" class="numcell" onmouseover="highlight(1,2,1)" onmouseout="unhighlight(1,2,1)">
+								<table id="intab12" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval12" class="invalue" onclick="clean(1,2)" ondblclick="insertnum(1,2)">&nbsp;</div>
+							</td>
+							<td id="c13" class="numcell" onmouseover="highlight(1,3,1)" onmouseout="unhighlight(1,3,1)">
+								<table id="intab13" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval13" class="invalue" onclick="clean(1,3)" ondblclick="insertnum(1,3)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c21" class="numcell" onmouseover="highlight(2,1,1)" onmouseout="unhighlight(2,1,1)">
+								<table id="intab21" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval21" class="invalue" onclick="clean(2,1)" ondblclick="insertnum(2,1)">&nbsp;</div>
+							</td>
+							<td id="c22" class="numcell" onmouseover="highlight(2,2,1)" onmouseout="unhighlight(2,2,1)">
+								<table id="intab22" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval22" class="invalue" onclick="clean(2,2)" ondblclick="insertnum(2,2)">&nbsp;</div>
+							</td>
+							<td id="c23" class="numcell" onmouseover="highlight(2,3,1)" onmouseout="unhighlight(2,3,1)">
+								<table id="intab23" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval23" class="invalue" onclick="clean(2,3)" ondblclick="insertnum(2,3)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c31" class="numcell" onmouseover="highlight(3,1,1)" onmouseout="unhighlight(3,1,1)">
+								<table id="intab31" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval31" class="invalue" onclick="clean(3,1)" ondblclick="insertnum(3,1)">&nbsp;</div>
+							</td>
+							<td id="c32" class="numcell" onmouseover="highlight(3,2,1)" onmouseout="unhighlight(3,2,1)">
+								<table id="intab32" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval32" class="invalue" onclick="clean(3,2)" ondblclick="insertnum(3,2)">&nbsp;</div>
+							</td>
+							<td id="c33" class="numcell" onmouseover="highlight(3,3,1)" onmouseout="unhighlight(3,3,1)">
+								<table id="intab33" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval33" class="invalue" onclick="clean(3,3)" ondblclick="insertnum(3,3)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+				<td>
+					<table id="t2" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c14" class="numcell" onmouseover="highlight(1,4,2)" onmouseout="unhighlight(1,4,2)">
+								<table id="intab14" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval14" class="invalue" onclick="clean(1,4)" ondblclick="insertnum(1,4)">&nbsp;</div>
+							</td>
+							<td id="c15" class="numcell" onmouseover="highlight(1,5,2)" onmouseout="unhighlight(1,5,2)">
+								<table id="intab15" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval15" class="invalue" onclick="clean(1,5)" ondblclick="insertnum(1,5)">&nbsp;</div>
+							</td>
+							<td id="c16" class="numcell" onmouseover="highlight(1,6,2)" onmouseout="unhighlight(1,6,2)">
+								<table id="intab16" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval16" class="invalue" onclick="clean(1,6)" ondblclick="insertnum(1,6)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c24" class="numcell" onmouseover="highlight(2,4,2)" onmouseout="unhighlight(2,4,2)">
+								<table id="intab24" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval24" class="invalue" onclick="clean(2,4)" ondblclick="insertnum(2,4)">&nbsp;</div>
+							</td>
+							<td id="c25" class="numcell" onmouseover="highlight(2,5,2)" onmouseout="unhighlight(2,5,2)">
+								<table id="intab25" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval25" class="invalue" onclick="clean(2,5)" ondblclick="insertnum(2,5)">&nbsp;</div>
+							</td>
+							<td id="c26" class="numcell" onmouseover="highlight(2,6,2)" onmouseout="unhighlight(2,6,2)">
+								<table id="intab26" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval26" class="invalue" onclick="clean(2,6)" ondblclick="insertnum(2,6)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c34" class="numcell" onmouseover="highlight(3,4,2)" onmouseout="unhighlight(3,4,2)">
+								<table id="intab34" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval34" class="invalue" onclick="clean(3,4)" ondblclick="insertnum(3,4)">&nbsp;</div>
+							</td>
+							<td id="c35" class="numcell" onmouseover="highlight(3,5,2)" onmouseout="unhighlight(3,5,2)">
+								<table id="intab35" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval35" class="invalue" onclick="clean(3,5)" ondblclick="insertnum(3,5)">&nbsp;</div>
+							</td>
+							<td id="c36" class="numcell" onmouseover="highlight(3,6,2)" onmouseout="unhighlight(3,6,2)">
+								<table id="intab36" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval36" class="invalue" onclick="clean(3,6)" ondblclick="insertnum(3,6)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+				<td>
+					<table id="t3" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c17" class="numcell" onmouseover="highlight(1,7,3)" onmouseout="unhighlight(1,7,3)">
+								<table id="intab17" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval17" class="invalue" onclick="clean(1,7)" ondblclick="insertnum(1,7)">&nbsp;</div>
+							</td>
+							<td id="c18" class="numcell" onmouseover="highlight(1,8,3)" onmouseout="unhighlight(1,8,3)">
+								<table id="intab18" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval18" class="invalue" onclick="clean(1,8)" ondblclick="insertnum(1,8)">&nbsp;</div>
+							</td>
+							<td id="c19" class="numcell" onmouseover="highlight(1,9,3)" onmouseout="unhighlight(1,9,3)">
+								<table id="intab19" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(1,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(1,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(1,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(1,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(1,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(1,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(1,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(1,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval19" class="invalue" onclick="clean(1,9)" ondblclick="insertnum(1,9)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c27" class="numcell" onmouseover="highlight(2,7,3)" onmouseout="unhighlight(2,7,3)">
+								<table id="intab27" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval27" class="invalue" onclick="clean(2,7)" ondblclick="insertnum(2,7)">&nbsp;</div>
+							</td>
+							<td id="c28" class="numcell" onmouseover="highlight(2,8,3)" onmouseout="unhighlight(2,8,3)">
+								<table id="intab28" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval28" class="invalue" onclick="clean(2,8)" ondblclick="insertnum(2,8)">&nbsp;</div>
+							</td>
+							<td id="c29" class="numcell" onmouseover="highlight(2,9,3)" onmouseout="unhighlight(2,9,3)">
+								<table id="intab29" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(2,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(2,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(2,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(2,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(2,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(2,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(2,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(2,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval29" class="invalue" onclick="clean(2,9)" ondblclick="insertnum(2,9)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c37" class="numcell" onmouseover="highlight(3,7,3)" onmouseout="unhighlight(3,7,3)">
+								<table id="intab37" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval37" class="invalue" onclick="clean(3,7)" ondblclick="insertnum(3,7)">&nbsp;</div>
+							</td>
+							<td id="c38" class="numcell" onmouseover="highlight(3,8,3)" onmouseout="unhighlight(3,8,3)">
+								<table id="intab38" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval38" class="invalue" onclick="clean(3,8)" ondblclick="insertnum(3,8)">&nbsp;</div>
+							</td>
+							<td id="c39" class="numcell" onmouseover="highlight(3,9,3)" onmouseout="unhighlight(3,9,3)">
+								<table id="intab39" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(3,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(3,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(3,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(3,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(3,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(3,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(3,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(3,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval39" class="invalue" onclick="clean(3,9)" ondblclick="insertnum(3,9)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<table id="t4" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c41" class="numcell" onmouseover="highlight(4,1,4)" onmouseout="unhighlight(4,1,4)">
+								<table id="intab41" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval41" class="invalue" onclick="clean(4,1)" ondblclick="insertnum(4,1)">&nbsp;</div>
+							</td>
+							<td id="c42" class="numcell" onmouseover="highlight(4,2,4)" onmouseout="unhighlight(4,2,4)">
+								<table id="intab42" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval42" class="invalue" onclick="clean(4,2)" ondblclick="insertnum(4,2)">&nbsp;</div>
+							</td>
+							<td id="c43" class="numcell" onmouseover="highlight(4,3,4)" onmouseout="unhighlight(4,3,4)">
+								<table id="intab43" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval43" class="invalue" onclick="clean(4,3)" ondblclick="insertnum(4,3)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c51" class="numcell" onmouseover="highlight(5,1,4)" onmouseout="unhighlight(5,1,4)">
+								<table id="intab51" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval51" class="invalue" onclick="clean(5,1)" ondblclick="insertnum(5,1)">&nbsp;</div>
+							</td>
+							<td id="c52" class="numcell" onmouseover="highlight(5,2,4)" onmouseout="unhighlight(5,2,4)">
+								<table id="intab52" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval52" class="invalue" onclick="clean(5,2)" ondblclick="insertnum(5,2)">&nbsp;</div>
+							</td>
+							<td id="c53" class="numcell" onmouseover="highlight(5,3,4)" onmouseout="unhighlight(5,3,4)">
+								<table id="intab53" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval53" class="invalue" onclick="clean(5,3)" ondblclick="insertnum(5,3)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c61" class="numcell" onmouseover="highlight(6,1,4)" onmouseout="unhighlight(6,1,4)">
+								<table id="intab61" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval61" class="invalue" onclick="clean(6,1)" ondblclick="insertnum(6,1)">&nbsp;</div>
+							</td>
+							<td id="c62" class="numcell" onmouseover="highlight(6,2,4)" onmouseout="unhighlight(6,2,4)">
+								<table id="intab62" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval62" class="invalue" onclick="clean(6,2)" ondblclick="insertnum(6,2)">&nbsp;</div>
+							</td>
+							<td id="c63" class="numcell" onmouseover="highlight(6,3,4)" onmouseout="unhighlight(6,3,4)">
+								<table id="intab63" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval63" class="invalue" onclick="clean(6,3)" ondblclick="insertnum(6,3)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+				<td>
+					<table id="t5" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c44" class="numcell" onmouseover="highlight(4,4,5)" onmouseout="unhighlight(4,4,5)">
+								<table id="intab44" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval44" class="invalue" onclick="clean(4,4)" ondblclick="insertnum(4,4)">&nbsp;</div>
+							</td>
+							<td id="c45" class="numcell" onmouseover="highlight(4,5,5)" onmouseout="unhighlight(4,5,5)">
+								<table id="intab45" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval45" class="invalue" onclick="clean(4,5)" ondblclick="insertnum(4,5)">&nbsp;</div>
+							</td>
+							<td id="c46" class="numcell" onmouseover="highlight(4,6,5)" onmouseout="unhighlight(4,6,5)">
+								<table id="intab46" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval46" class="invalue" onclick="clean(4,6)" ondblclick="insertnum(4,6)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c54" class="numcell" onmouseover="highlight(5,4,5)" onmouseout="unhighlight(5,4,5)">
+								<table id="intab54" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval54" class="invalue" onclick="clean(5,4)" ondblclick="insertnum(5,4)">&nbsp;</div>
+							</td>
+							<td id="c55" class="numcell" onmouseover="highlight(5,5,5)" onmouseout="unhighlight(5,5,5)">
+								<table id="intab55" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval55" class="invalue" onclick="clean(5,5)" ondblclick="insertnum(5,5)">&nbsp;</div>
+							</td>
+							<td id="c56" class="numcell" onmouseover="highlight(5,6,5)" onmouseout="unhighlight(5,6,5)">
+								<table id="intab56" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval56" class="invalue" onclick="clean(5,6)" ondblclick="insertnum(5,6)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c64" class="numcell" onmouseover="highlight(6,4,5)" onmouseout="unhighlight(6,4,5)">
+								<table id="intab64" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval64" class="invalue" onclick="clean(6,4)" ondblclick="insertnum(6,4)">&nbsp;</div>
+							</td>
+							<td id="c65" class="numcell" onmouseover="highlight(6,5,5)" onmouseout="unhighlight(6,5,5)">
+								<table id="intab65" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval65" class="invalue" onclick="clean(6,5)" ondblclick="insertnum(6,5)">&nbsp;</div>
+							</td>
+							<td id="c66" class="numcell" onmouseover="highlight(6,6,5)" onmouseout="unhighlight(6,6,5)">
+								<table id="intab66" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval66" class="invalue" onclick="clean(6,6)" ondblclick="insertnum(6,6)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+				<td>
+					<table id="t6" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c47" class="numcell" onmouseover="highlight(4,7,6)" onmouseout="unhighlight(4,7,6)">
+								<table id="intab47" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval47" class="invalue" onclick="clean(4,7)" ondblclick="insertnum(4,7)">&nbsp;</div>
+							</td>
+							<td id="c48" class="numcell" onmouseover="highlight(4,8,6)" onmouseout="unhighlight(4,8,6)">
+								<table id="intab48" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval48" class="invalue" onclick="clean(4,8)" ondblclick="insertnum(4,8)">&nbsp;</div>
+							</td>
+							<td id="c49" class="numcell" onmouseover="highlight(4,9,6)" onmouseout="unhighlight(4,9,6)">
+								<table id="intab49" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(4,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(4,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(4,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(4,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(4,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(4,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(4,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(4,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval49" class="invalue" onclick="clean(4,9)" ondblclick="insertnum(4,9)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c57" class="numcell" onmouseover="highlight(5,7,6)" onmouseout="unhighlight(5,7,6)">
+								<table id="intab57" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval57" class="invalue" onclick="clean(5,7)" ondblclick="insertnum(5,7)">&nbsp;</div>
+							</td>
+							<td id="c58" class="numcell" onmouseover="highlight(5,8,6)" onmouseout="unhighlight(5,8,6)">
+								<table id="intab58" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval58" class="invalue" onclick="clean(5,8)" ondblclick="insertnum(5,8)">&nbsp;</div>
+							</td>
+							<td id="c59" class="numcell" onmouseover="highlight(5,9,6)" onmouseout="unhighlight(5,9,6)">
+								<table id="intab59" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(5,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(5,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(5,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(5,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(5,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(5,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(5,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(5,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval59" class="invalue" onclick="clean(5,9)" ondblclick="insertnum(5,9)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c67" class="numcell" onmouseover="highlight(6,7,6)" onmouseout="unhighlight(6,7,6)">
+								<table id="intab67" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval67" class="invalue" onclick="clean(6,7)" ondblclick="insertnum(6,7)">&nbsp;</div>
+							</td>
+							<td id="c68" class="numcell" onmouseover="highlight(6,8,6)" onmouseout="unhighlight(6,8,6)">
+								<table id="intab68" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval68" class="invalue" onclick="clean(6,8)" ondblclick="insertnum(6,8)">&nbsp;</div>
+							</td>
+							<td id="c69" class="numcell" onmouseover="highlight(6,9,6)" onmouseout="unhighlight(6,9,6)">
+								<table id="intab69" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(6,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(6,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(6,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(6,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(6,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(6,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(6,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(6,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval69" class="invalue" onclick="clean(6,9)" ondblclick="insertnum(6,9)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<table id="t7" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c71" class="numcell" onmouseover="highlight(7,1,7)" onmouseout="unhighlight(7,1,7)">
+								<table id="intab71" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval71" class="invalue" onclick="clean(7,1)" ondblclick="insertnum(7,1)">&nbsp;</div>
+							</td>
+							<td id="c72" class="numcell" onmouseover="highlight(7,2,7)" onmouseout="unhighlight(7,2,7)">
+								<table id="intab72" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval72" class="invalue" onclick="clean(7,2)" ondblclick="insertnum(7,2)">&nbsp;</div>
+							</td>
+							<td id="c73" class="numcell" onmouseover="highlight(7,3,7)" onmouseout="unhighlight(7,3,7)">
+								<table id="intab73" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval73" class="invalue" onclick="clean(7,3)" ondblclick="insertnum(7,3)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c81" class="numcell" onmouseover="highlight(8,1,7)" onmouseout="unhighlight(8,1,7)">
+								<table id="intab81" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval81" class="invalue" onclick="clean(8,1)" ondblclick="insertnum(8,1)">&nbsp;</div>
+							</td>
+							<td id="c82" class="numcell" onmouseover="highlight(8,2,7)" onmouseout="unhighlight(8,2,7)">
+								<table id="intab82" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval82" class="invalue" onclick="clean(8,2)" ondblclick="insertnum(8,2)">&nbsp;</div>
+							</td>
+							<td id="c83" class="numcell" onmouseover="highlight(8,3,7)" onmouseout="unhighlight(8,3,7)">
+								<table id="intab83" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval83" class="invalue" onclick="clean(8,3)" ondblclick="insertnum(8,3)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c91" class="numcell" onmouseover="highlight(9,1,7)" onmouseout="unhighlight(9,1,7)">
+								<table id="intab91" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,1,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,1,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,1,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,1,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,1,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,1,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,1,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,1,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,1,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval91" class="invalue" onclick="clean(9,1)" ondblclick="insertnum(9,1)">&nbsp;</div>
+							</td>
+							<td id="c92" class="numcell" onmouseover="highlight(9,2,7)" onmouseout="unhighlight(9,2,7)">
+								<table id="intab92" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,2,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,2,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,2,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,2,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,2,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,2,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,2,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,2,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,2,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval92" class="invalue" onclick="clean(9,2)" ondblclick="insertnum(9,2)">&nbsp;</div>
+							</td>
+							<td id="c93" class="numcell" onmouseover="highlight(9,3,7)" onmouseout="unhighlight(9,3,7)">
+								<table id="intab93" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,3,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,3,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,3,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,3,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,3,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,3,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,3,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,3,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,3,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval93" class="invalue" onclick="clean(9,3)" ondblclick="insertnum(9,3)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+				<td>
+					<table id="t8" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c74" class="numcell" onmouseover="highlight(7,4,8)" onmouseout="unhighlight(7,4,8)">
+								<table id="intab74" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval74" class="invalue" onclick="clean(7,4)" ondblclick="insertnum(7,4)">&nbsp;</div>
+							</td>
+							<td id="c75" class="numcell" onmouseover="highlight(7,5,8)" onmouseout="unhighlight(7,5,8)">
+								<table id="intab75" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval75" class="invalue" onclick="clean(7,5)" ondblclick="insertnum(7,5)">&nbsp;</div>
+							</td>
+							<td id="c76" class="numcell" onmouseover="highlight(7,6,8)" onmouseout="unhighlight(7,6,8)">
+								<table id="intab76" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval76" class="invalue" onclick="clean(7,6)" ondblclick="insertnum(7,6)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c84" class="numcell" onmouseover="highlight(8,4,8)" onmouseout="unhighlight(8,4,8)">
+								<table id="intab84" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval84" class="invalue" onclick="clean(8,4)" ondblclick="insertnum(8,4)">&nbsp;</div>
+							</td>
+							<td id="c85" class="numcell" onmouseover="highlight(8,5,8)" onmouseout="unhighlight(8,5,8)">
+								<table id="intab85" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval85" class="invalue" onclick="clean(8,5)" ondblclick="insertnum(8,5)">&nbsp;</div>
+							</td>
+							<td id="c86" class="numcell" onmouseover="highlight(8,6,8)" onmouseout="unhighlight(8,6,8)">
+								<table id="intab86" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval86" class="invalue" onclick="clean(8,6)" ondblclick="insertnum(8,6)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c94" class="numcell" onmouseover="highlight(9,4,8)" onmouseout="unhighlight(9,4,8)">
+								<table id="intab94" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,4,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,4,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,4,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,4,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,4,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,4,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,4,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,4,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,4,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval94" class="invalue" onclick="clean(9,4)" ondblclick="insertnum(9,4)">&nbsp;</div>
+							</td>
+							<td id="c95" class="numcell" onmouseover="highlight(9,5,8)" onmouseout="unhighlight(9,5,8)">
+								<table id="intab95" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,5,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,5,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,5,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,5,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,5,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,5,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,5,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,5,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,5,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval95" class="invalue" onclick="clean(9,5)" ondblclick="insertnum(9,5)">&nbsp;</div>
+							</td>
+							<td id="c96" class="numcell" onmouseover="highlight(9,6,8)" onmouseout="unhighlight(9,6,8)">
+								<table id="intab96" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,6,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,6,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,6,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,6,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,6,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,6,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,6,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,6,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,6,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval96" class="invalue" onclick="clean(9,6)" ondblclick="insertnum(9,6)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+				<td>
+					<table id="t9" class="mediumtab" border="1" cellpadding="0" cellspacing="0">
+						<tbody><tr>
+							<td id="c77" class="numcell" onmouseover="highlight(7,7,9)" onmouseout="unhighlight(7,7,9)">
+								<table id="intab77" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval77" class="invalue" onclick="clean(7,7)" ondblclick="insertnum(7,7)">&nbsp;</div>
+							</td>
+							<td id="c78" class="numcell" onmouseover="highlight(7,8,9)" onmouseout="unhighlight(7,8,9)">
+								<table id="intab78" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval78" class="invalue" onclick="clean(7,8)" ondblclick="insertnum(7,8)">&nbsp;</div>
+							</td>
+							<td id="c79" class="numcell" onmouseover="highlight(7,9,9)" onmouseout="unhighlight(7,9,9)">
+								<table id="intab79" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(7,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(7,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(7,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(7,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(7,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(7,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(7,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(7,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval79" class="invalue" onclick="clean(7,9)" ondblclick="insertnum(7,9)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c87" class="numcell" onmouseover="highlight(8,7,9)" onmouseout="unhighlight(8,7,9)">
+								<table id="intab87" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval87" class="invalue" onclick="clean(8,7)" ondblclick="insertnum(8,7)">&nbsp;</div>
+							</td>
+							<td id="c88" class="numcell" onmouseover="highlight(8,8,9)" onmouseout="unhighlight(8,8,9)">
+								<table id="intab88" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval88" class="invalue" onclick="clean(8,8)" ondblclick="insertnum(8,8)">&nbsp;</div>
+							</td>
+							<td id="c89" class="numcell" onmouseover="highlight(8,9,9)" onmouseout="unhighlight(8,9,9)">
+								<table id="intab89" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(8,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(8,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(8,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(8,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(8,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(8,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(8,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(8,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval89" class="invalue" onclick="clean(8,9)" ondblclick="insertnum(8,9)">&nbsp;</div>
+							</td>
+						</tr>
+						<tr>
+							<td id="c97" class="numcell" onmouseover="highlight(9,7,9)" onmouseout="unhighlight(9,7,9)">
+								<table id="intab97" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,7,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,7,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,7,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,7,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,7,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,7,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,7,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,7,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,7,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval97" class="invalue" onclick="clean(9,7)" ondblclick="insertnum(9,7)">&nbsp;</div>
+							</td>
+							<td id="c98" class="numcell" onmouseover="highlight(9,8,9)" onmouseout="unhighlight(9,8,9)">
+								<table id="intab98" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,8,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,8,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,8,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,8,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,8,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,8,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,8,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,8,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,8,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval98" class="invalue" onclick="clean(9,8)" ondblclick="insertnum(9,8)">&nbsp;</div>
+							</td>
+							<td id="c99" class="numcell" onmouseover="highlight(9,9,9)" onmouseout="unhighlight(9,9,9)">
+								<table id="intab99" class="opttab" style="display: none;" border="0" cellpadding="0" cellspacing="0">
+									<tbody><tr>
+										<td class="optcel" onclick="acceptnum(9,9,1)">1</td>
+										<td class="optcel" onclick="acceptnum(9,9,2)">2</td>
+										<td class="optcel" onclick="acceptnum(9,9,3)">3</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,9,4)">4</td>
+										<td class="optcel" onclick="acceptnum(9,9,5)">5</td>
+										<td class="optcel" onclick="acceptnum(9,9,6)">6</td>
+									</tr>
+									<tr>
+										<td class="optcel" onclick="acceptnum(9,9,7)">7</td>
+										<td class="optcel" onclick="acceptnum(9,9,8)">8</td>
+										<td class="optcel" onclick="acceptnum(9,9,9)">9</td>
+									</tr>
+								</tbody></table>
+								<div id="inval99" class="invalue" onclick="clean(9,9)" ondblclick="insertnum(9,9)">&nbsp;</div>
+							</td>
+						</tr>
+					</tbody></table>
+				</td>
+			</tr>
+		</tbody></table>
+		<div style="display:none;" id="timer">
+			<div style="font-size:22px;padding-left:65px;">
+				<span id="hour">00</span>:<span id="minute">00</span>:<span id="second">00</span>
+			</div>
+			<input class="button" id="pause_button" type="button" value="Pause game" onclick="pause_timer()"/><br/>
+		</div>
+		<div id="game_buttons">
+			<input class="button" id="start" value="Start game" onclick="CreateGame()" type="button"><br>
+			<input class="button" id="onoffposibilityes" value="Turn on possibilities" onclick="TurnOnPossibilities()" type="button">
+		</div>
+<!--	<input class="button" value="Clean all fields" onclick="cleanall()" type="button"/><br>
+		<input class="button" value="Fill from DB" onclick="fillDB()" type="button"><br>
+		<input class="button" value="Rotate" onclick="rotateAroundMainDiagonal();" type="button"><br>
+		<input class="button" value="Switch two random big rows" onclick="changeBigRows();" type="button"><br>
+		<input class="button" value="Switch two random small rows" onclick="changeSmallRows();" type="button"><br>
+		<input class="button" value="Switch two big rows" onclick="switchRows(0,2,true);" type="button"><br>
+		<input class="button" value="Switch two small rows" onclick="switchRows(0,1,false);" type="button"><br>
+		<input class="button" value="Fill" onclick="fill()" type="button"><br>
+		<input class="button" value="Get solution" onclick="solve()" type="button"><br>
+		<input class="button" id="randomrefill" value="Randomly refill" onclick="RandomlyRefill()" type="button"><br>-->
+	<!--	<input class="button" id="lvlbutton" value="Check level" onclick="ChooseLevel()" type="button"><br>
+		<input class="button" id="slicebt" value="Check Slice function" onclick="alert(dbfilled.slice(9,18));" type="button"><br>
+		<input class="button" id="restart" value="Restart game" onclick="RestartGame()" type="button"><br>
+		<input class="button" id="random" value="Get random number" onclick="RandomNum()" type="button"><br>--><br>
+		<div style="display: block; visibility:hidden; height:1px; color: black;">
+		<!--	Check each checkbox if use of such function is needed while solving
+			<input class="button" id="checkall" value="Check all" onclick="CheckAll()" type="button"><br>-->
+			<input id="cb1" value="1" type="checkbox"> Use Lonely<br>
+			<input id="cb2" value="2" type="checkbox"> Use Hidden lonely<br>
+			<input id="cb3" value="3" type="checkbox"> Use Locked candidates<br>
+			<input id="cb4" value="4" type="checkbox"> Use Open groups<br><br>
+		</div>
+		<h2>Choose the level:</h2>
+		<form name="levels">
+			<input id="lvl1" name="level" type="radio"/> Easy<br/>
+			<input id="lvl2" name="level" type="radio"/> Medium<br/>
+			<input id="lvl3" name="level" type="radio"/> Hard<br/>
+			<input style="visibility:hidden;" id="lvl4" name="level" type="radio" onclick="showCustom()" checked />
+		</form>
+		<br/>
+		<input type="checkbox" id="timed"/>
+		<label>Timed game</label>
+		<br/><br/><br/>
+		<table width="90" height="90" style="border-collapse: collapse;border: 1px solid black; display: none;" id="tbhighlight">
+			<tr>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">1</td>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">2</td>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">3</td>
+			</tr>
+			<tr>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">4</td>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">5</td>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">6</td>
+			</tr>
+			<tr>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">7</td>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">8</td>
+				<td onmouseover="HighlightPosible(this.innerHTML)" onmouseout="UnhighlightPosible()">9</td>
+			</tr>
+		</table>
+	<!--	<input class="button" value="Save grid to file" onclick="SaveToFile()" type="button"><br>
+		<input class="button" value="Open file content" onclick="CopyFromFile()" type="button"><br>-->
+
+	<!--	<input type="date"/><br/>
+		<input type="datetime"/><br/>
+		<input type="range" min="1" max="3"/><br/>
+		<input type="week"/><br/>
+		<input type="color"/><br/>
+		<input type="tel"/><br/>
+		<input type="number" min="3" max="7"/><br/>
+		<!--<input type="button" value="Play" onclick="play()"/>-->
+		<div id="filecont">
+			If You found some problems while using this game please contact me by e-mail <a href="mailto:yevgtan@gmail.com">yevgtan@gmail.com</a><br>
+			Please also add to Your message the following:<br><br>
+			<span id="message"></span>
+		</div>
+
+
+</body></html>
